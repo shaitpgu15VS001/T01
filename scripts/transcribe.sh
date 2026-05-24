@@ -8,7 +8,10 @@ LANG="${3:-auto}"
 BASENAME=$(basename "$INPUT_FILE")
 
 WHISPER_BIN=""
-for candidate in "./whisper.cpp/main" "./whisper.cpp/build/bin/main"; do
+for candidate in \
+    "./whisper.cpp/build/bin/whisper-cli" \
+    "./whisper.cpp/main" \
+    "./whisper.cpp/build/bin/main"; do
     if [ -f "$candidate" ]; then
         WHISPER_BIN="$candidate"
         break
@@ -17,11 +20,12 @@ done
 
 if [ -z "$WHISPER_BIN" ]; then
     echo "שגיאה: לא נמצא בינארי של whisper.cpp"
-    ls -la ./whisper.cpp/
+    ls -la ./whisper.cpp/build/bin/ 2>/dev/null || echo "build/bin/ לא קיים"
+    ls -la ./whisper.cpp/ 2>/dev/null
     exit 1
 fi
 
-WHISPER_DIR=$(dirname "$WHISPER_BIN")
+WHISPER_DIR=$(dirname "$(dirname "$WHISPER_BIN")")
 MODEL_FILE="$WHISPER_DIR/models/ggml-tiny.bin"
 
 if [ ! -f "$MODEL_FILE" ]; then
@@ -29,7 +33,7 @@ if [ ! -f "$MODEL_FILE" ]; then
 fi
 
 if [ ! -f "$MODEL_FILE" ]; then
-    echo "שגיאה: מודל לא נמצא"
+    echo "שגיאה: מודל לא נמצא ב-$MODEL_FILE"
     exit 1
 fi
 

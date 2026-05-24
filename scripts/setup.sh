@@ -3,28 +3,32 @@ set -e
 
 echo "=== setup.sh: התקנת whisper.cpp ==="
 
-if [ -d "whisper.cpp" ]; then
-    if [ ! -f "whisper.cpp/main" ]; then
+WHISPER_DIR="whisper.cpp"
+WHISPER_BIN="$WHISPER_DIR/build/bin/whisper-cli"
+
+if [ -d "$WHISPER_DIR" ]; then
+    if [ ! -f "$WHISPER_BIN" ]; then
         echo "הבינארי חסר, מוחק ומקלון מחדש..."
-        rm -rf whisper.cpp
+        rm -rf "$WHISPER_DIR"
     fi
 fi
 
-if [ ! -d "whisper.cpp" ]; then
+if [ ! -d "$WHISPER_DIR" ]; then
     echo "מוריד את whisper.cpp..."
     git clone --depth 1 https://github.com/ggerganov/whisper.cpp
 fi
 
-cd whisper.cpp
+cd "$WHISPER_DIR"
 
-if [ ! -f "main" ]; then
-    echo "מהדר את whisper.cpp..."
-    make -j$(nproc)
+if [ ! -f "build/bin/whisper-cli" ]; then
+    echo "מהדר את whisper.cpp (cmake)..."
+    cmake -B build
+    cmake --build build --config release -j$(nproc)
 fi
 
-if [ ! -f "main" ]; then
-    echo "שגיאה: קומפילציה נכשלה, main לא נוצר"
-    ls -la
+if [ ! -f "build/bin/whisper-cli" ]; then
+    echo "שגיאה: קומפילציה נכשלה, whisper-cli לא נוצר"
+    ls -la build/bin/ 2>/dev/null || echo "build/bin/ לא קיים"
     exit 1
 fi
 
@@ -35,8 +39,8 @@ if [ ! -f "models/$MODEL" ]; then
     wget -q -O "models/$MODEL" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$MODEL"
 fi
 
-echo "תוכן whisper.cpp:"
-ls -la main
+echo "תוכן build/bin/:"
+ls -la build/bin/
 
 cd ..
 echo "=== setup.sh: הושלם ==="
