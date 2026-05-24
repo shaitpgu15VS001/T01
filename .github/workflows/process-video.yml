@@ -3,11 +3,19 @@ name: תמלול ותרגום סרטונים
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'מצב: full (תמלול+תרגום+צריבה) / burn_only (צריבת כתוביות קיימות)'
+        required: false
+        default: 'full'
       video_url:
         description: 'קישור לסרטון (URL ישיר או Dropbox)'
         required: true
+      subtitle_url:
+        description: 'קישור לקובץ כתוביות (SRT/VTT/ASS) — למצב burn_only'
+        required: false
+        default: ''
       source_lang:
-        description: 'שפת מקור (auto / en / he / fr / etc.)'
+        description: 'שפת מקור (auto / en / he / fr)'
         required: false
         default: 'auto'
       target_lang:
@@ -15,11 +23,11 @@ on:
         required: false
         default: 'he'
       action:
-        description: 'פעולה: subtitles (רק כתוביות) / burn (צרוב על הסרטון)'
+        description: 'פעולה: subtitles (רק כתוביות) / burn (צרוב)'
         required: false
         default: 'subtitles'
       font_size:
-        description: 'גודל פונט (אם צריבה)'
+        description: 'גודל פונט'
         required: false
         default: '20'
       font_color:
@@ -31,7 +39,7 @@ on:
         required: false
         default: 'bottom'
       translation_engine:
-        description: 'מנוע תרגום: argos (מקומי) / google (דרך האינטרנט)'
+        description: 'מנוע תרגום: argos / google'
         required: false
         default: 'argos'
       whisper_model:
@@ -52,79 +60,74 @@ jobs:
           pip3 install requests argostranslate deep-translator
 
       - name: מטמון whisper.cpp
+        if: inputs.mode == 'full'
         id: whisper-cache
         uses: actions/cache@v5
         with:
           path: whisper.cpp/
           key: whisper-cpp-${{ runner.os }}-${{ inputs.whisper_model }}-${{ hashFiles('scripts/setup.sh') }}
 
-      - name: בדיקת תוכן הקאש
-        run: |
-          if [ -d "whisper.cpp" ]; then
-            echo "whisper.cpp קיים:"
-            ls -la whisper.cpp/ | head -20
-            [ -f "whisper.cpp/build/bin/whisper-cli" ] && echo "✅ whisper-cli קיים" || echo "❌ whisper-cli חסר"
-          else
-            echo "whisper.cpp לא קיים (cache miss)"
-          fi
-
       - name: התקנת whisper.cpp
+        if: inputs.mode == 'full'
         run: bash scripts/setup.sh ${{ inputs.whisper_model }}
 
       - name: הורדת הסרטון
         run: |
-          mkdir -p work
+          mkdir -p work output
           bash scripts/download.sh "${{ inputs.video_url }}" work input.mp4
 
       - name: חילוץ אודיו
-        run: |
-          ffmpeg -i work/input.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le work/audio.wav -y
+        if: inputs.mode == 'full'
+        run: ffmpeg -i work/input.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le work/audio.wav -y
 
-      - name: תמלול (Whisper)
-        run: |
-          bash scripts/transcribe.sh work/audio.wav work ${{ inputs.source_lang }} ${{ inputs.whisper_model }}
+      - name: תמלול
+        if: inputs.mode == 'full'
+        run: bash scripts/transcribe.sh work/audio.wav work ${{ inputs.source_lang }} ${{ inputs.whisper_model }}
 
-      - name: מטמון מודלי Argos Translate
+      - name: מטמון מודלי Argos
+        if: inputs.mode == 'full'
         id: argos-cache
         uses: actions/cache@v5
         with:
           path: ~/.local/share/argos-translate/
           key: argos-${{ runner.os }}-${{ inputs.source_lang }}-${{ inputs.target_lang }}-${{ hashFiles('scripts/translate.py') }}
 
-      - name: תרגום כתוביות
+      - name: תרגום
+        if: inputs.mode == 'full'
         run: |
           python3 scripts/translate.py \
-            work/source.srt \
-            work/target.srt \
-            ${{ inputs.source_lang }} \
-            ${{ inputs.target_lang }} \
-            work/source.json \
-            ${{ inputs.translation_engine }}
+            work/source.srt work/target.srt \
+            ${{ inputs.source_lang }} ${{ inputs.target_lang }} \
+            work/source.json ${{ inputs.translation_engine }}
 
       - name: יצירת קבצי כתוביות
+        if: inputs.mode == 'full'
         run: |
           python3 scripts/gen-subtitles.py \
-            work/source.srt \
-            work/target.srt \
-            output \
-            "Arial" \
-            "${{ inputs.font_size }}" \
-            "${{ inputs.font_color }}" \
-            "${{ inputs.position }}"
+            work/source.srt work/target.srt output \
+            "Arial" "${{ inputs.font_size }}" "${{ inputs.font_color }}" "${{ inputs.position }}"
 
       - name: העלאת כתוביות ל-Artefacts
+        if: inputs.mode == 'full'
         uses: actions/upload-artifact@v7
         with:
           name: כתוביות
           path: output/
 
-      - name: צריבת כתוביות על הסרטון
-        if: inputs.action == 'burn'
-        run: |
-          bash scripts/burn.sh work/input.mp4 output/subtitles.ass output/סרטון-מסומן.mp4
+      - name: הורדת כתוביות קיימות
+        if: inputs.mode == 'burn_only' && inputs.subtitle_url != ''
+        run: bash scripts/download.sh "${{ inputs.subtitle_url }}" output subtitles.srt
 
-      - name: העלאת סרטון ממוסג ל-Artefacts
-        if: inputs.action == 'burn'
+      - name: צריבת כתוביות
+        if: inputs.action == 'burn' || inputs.mode == 'burn_only'
+        run: |
+          SUBS="output/subtitles.ass"
+          [ ! -f "$SUBS" ] && SUBS="output/subtitles.srt"
+          [ ! -f "$SUBS" ] && { echo "לא נמצא קובץ כתוביות"; exit 1; }
+          bash scripts/burn.sh work/input.mp4 "$SUBS" output/סרטון-מסומן.mp4
+
+      - name: העלאת סרטון ל-Artefacts
+        if: inputs.action == 'burn' || inputs.mode == 'burn_only'
         uses: actions/upload-artifact@v7
         with:
           name: סרטון-מסומן
@@ -134,14 +137,13 @@ jobs:
         env:
           DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
           DROPBOX_PATH: /תמלול ותרגום
-        run: |
-          bash scripts/upload.sh output
+        run: bash scripts/upload.sh output
 
       - name: סיכום
         run: |
           echo "## ✅ סיום תהליך" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.action }}" = "burn" ]; then
+          echo "- מצב: ${{ inputs.mode }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.action }}" = "burn" ] || [ "${{ inputs.mode }}" = "burn_only" ]; then
             echo "- 🎬 סרטון עם כתוביות נוצר" >> $GITHUB_STEP_SUMMARY
           fi
           echo "- 📄 קבצי כתוביות זמינים להורדה" >> $GITHUB_STEP_SUMMARY
