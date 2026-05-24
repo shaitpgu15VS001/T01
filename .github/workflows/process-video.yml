@@ -1,0 +1,120 @@
+name: תמלול ותרגום סרטונים
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'קישור לסרטון (URL ישיר או Dropbox)'
+        required: true
+      source_lang:
+        description: 'שפת מקור (auto / en / he / fr / etc.)'
+        required: false
+        default: 'auto'
+      target_lang:
+        description: 'שפת יעד'
+        required: false
+        default: 'he'
+      action:
+        description: 'פעולה: subtitles (רק כתוביות) / burn (צרוב על הסרטון)'
+        required: false
+        default: 'subtitles'
+      font_size:
+        description: 'גודל פונט (אם צריבה)'
+        required: false
+        default: '20'
+      font_color:
+        description: 'צבע טקסט (הקס: &H00FFFFFF)'
+        required: false
+        default: '&H00FFFFFF'
+      position:
+        description: 'מיקום: bottom / top'
+        required: false
+        default: 'bottom'
+
+jobs:
+  process-video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: התקנת תלויות מערכת
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg wget
+          pip3 install requests
+
+      - name: מטמון whisper.cpp
+        id: whisper-cache
+        uses: actions/cache@v4
+        with:
+          path: whisper.cpp/
+          key: whisper-cpp-${{ runner.os }}-${{ hashFiles('scripts/setup.sh') }}
+
+      - name: התקנת whisper.cpp
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
+        run: bash scripts/setup.sh
+
+      - name: הורדת הסרטון
+        run: |
+          mkdir -p work
+          bash scripts/download.sh "${{ inputs.video_url }}" work input.mp4
+
+      - name: חילוץ אודיו
+        run: |
+          ffmpeg -i work/input.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le work/audio.wav -y
+
+      - name: תמלול (Whisper)
+        run: |
+          bash scripts/transcribe.sh work/audio.wav work ${{ inputs.source_lang }}
+
+      - name: תרגום כתוביות
+        run: |
+          python3 scripts/translate.py \
+            work/source.srt \
+            work/target.srt \
+            ${{ inputs.source_lang }} \
+            ${{ inputs.target_lang }}
+
+      - name: יצירת קבצי כתוביות
+        run: |
+          python3 scripts/gen-subtitles.py \
+            work/source.srt \
+            work/target.srt \
+            output \
+            "${{ inputs.font_size }}" \
+            "${{ inputs.font_color }}" \
+            "${{ inputs.position }}"
+
+      - name: העלאת כתוביות ל-Artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: כתוביות
+          path: output/
+
+      - name: צריבת כתוביות על הסרטון
+        if: inputs.action == 'burn'
+        run: |
+          bash scripts/burn.sh work/input.mp4 output/subtitles.ass output/סרטון-מסומן.mp4
+
+      - name: העלאת סרטון ממוסג ל-Artefacts
+        if: inputs.action == 'burn'
+        uses: actions/upload-artifact@v4
+        with:
+          name: סרטון-מסומן
+          path: output/סרטון-מסומן.mp4
+
+      - name: העלאה ל-Dropbox
+        env:
+          DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
+          DROPBOX_PATH: /תמלול ותרגום
+        run: |
+          bash scripts/upload.sh output
+
+      - name: סיכום
+        run: |
+          echo "## ✅ סיום תהליך" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.action }}" = "burn" ]; then
+            echo "- 🎬 סרטון עם כתוביות נוצר" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- 📄 קבצי כתוביות זמינים להורדה" >> $GITHUB_STEP_SUMMARY
