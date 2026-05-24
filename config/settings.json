@@ -1,0 +1,23 @@
+{
+  "whisper": {
+    "model": "tiny",
+    "model_file": "ggml-tiny.bin",
+    "repo": "https://github.com/ggerganov/whisper.cpp",
+    "model_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
+  },
+  "libretranslate": {
+    "url": "https://libretranslate.com/translate",
+    "chunk_size": 20,
+    "rate_limit_sec": 1
+  },
+  "subtitles": {
+    "font_name": "Arial",
+    "font_size": 20,
+    "font_color": "&H00FFFFFF",
+    "outline_color": "&H00000000",
+    "position": "bottom"
+  },
+  "dropbox": {
+    "upload_path": "/תמלול ותרגום"
+  }
+}
