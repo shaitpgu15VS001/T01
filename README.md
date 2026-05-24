@@ -12,7 +12,7 @@
 | רכיב | טכנולוגיה |
 |------|-----------|
 | תמלול | Whisper.cpp (דגם tiny, רץ על CPU) |
-| תרגום | LibreTranslate API (חינמי, ללא חשבון) |
+| תרגום | Argos Translate (מקומי) / Google Translate (דרך האינטרנט) |
 | צריבת כתוביות | FFmpeg + ASS |
 | תשתית | GitHub Actions (ubuntu-latest, 2 ליבות) |
 
@@ -64,6 +64,7 @@ cd פרוייקט-תמלול-ותרגום
 | `font_size` | גודל גופן (אם צריבה) | ❌ | `20` |
 | `font_color` | צבע טקסט בהקס (אם צריבה) | ❌ | `&H00FFFFFF` |
 | `position` | מיקום: `bottom` או `top` (אם צריבה) | ❌ | `bottom` |
+| `translation_engine` | מנוע תרגום: `argos` (מקומי) / `google` | ❌ | `argos` |
 
 ### דוגמאות לקישורים
 
@@ -97,8 +98,9 @@ https://www.dropbox.com/s/abc123/myvideo.mp4
 
 **הערה**: הדיוק משתנה בין שפות. מומלץ להשתמש ב-`auto` לזיהוי אוטומטי.
 
-### LibreTranslate (תרגום)
-תומך בכ-30 שפות. כולל: עברית, אנגלית, ערבית, רוסית, צרפתית, ספרדית, גרמנית ועוד.
+### Argos Translate / Google Translate (תרגום)
+- **Argos** — תרגום מקומי (ללא אינטרנט), תומך בכ-30 שפות
+- **Google** — תרגום דרך האינטרנט, איכות גבוהה, תומך בלמעלה מ-100 שפות
 
 ## מגבלות
 
@@ -107,7 +109,7 @@ https://www.dropbox.com/s/abc123/myvideo.mp4
 | **מהירות** | Whisper על CPU איטי — סרטון 10 דקות עשוי לקחת 30-60 דקות |
 | **אורך סרטון** | GitHub Actions מוגבל ל-6 שעות ריצה (מותר עד ~30 דקות וידאו) |
 | **גודל קובץ** | GitHub Files מוגבל ל-10GB |
-| **תרגום** | LibreTranslate public API מוגבל ל-500 תרגומים/שעה |
+| **תרגום (Google)** | Google Translate הא-רשמי עלול להיחסם לעיתים נדירות |
 | **דיוק** | דגם tiny פחות מדויק מדגמים גדולים (ניתן לשדרוג) |
 
 ## התאמה אישית
@@ -138,7 +140,7 @@ https://www.dropbox.com/s/abc123/myvideo.mp4
 │   ├── setup.sh             # התקנת whisper.cpp + מודל
 │   ├── download.sh          # הורדת סרטון מ-URL/Dropbox
 │   ├── transcribe.sh        # תמלול עם whisper.cpp
-│   ├── translate.py         # תרגום SRT דרך LibreTranslate
+│   ├── translate.py         # תרגום SRT (Argos / Google)
 │   ├── gen-subtitles.py     # יצירת SRT/VTT/ASS
 │   ├── burn.sh              # צריבת כתוביות על הסרטון
 │   └── upload.sh            # העלאה ל-Dropbox
@@ -151,7 +153,7 @@ https://www.dropbox.com/s/abc123/myvideo.mp4
 
 **ה-Action נכשל ב-Setup**: נסו להריץ שוב — ייתכן כשל זמני בהורדת המודל.
 
-**תרגום נכשל**: LibreTranslate public API עלול להיות לא זמין לעיתים. אפשר להגדיר שרת פרטי.
+**תרגום Google נכשל**: נסו לעבור ל-`argos`. **תרגום Argos נכשל**: נסו לעבור ל-`google`.
 
 **הסרטון לא יורד**: ודאו שהקישור נגיש לציבור (ללא סיסמה).
 
