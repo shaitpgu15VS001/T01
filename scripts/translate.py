@@ -30,6 +30,14 @@ if SRC_LANG == TGT_LANG or not SRC_LANG:
     print("שפות זהות, מעתיק כמות שהוא")
     sys.exit(0)
 
+GOOGLE_LANG_MAP = {
+    "he": "iw",
+    "jw": "jv",
+}
+if ENGINE == "google":
+    SRC_LANG = GOOGLE_LANG_MAP.get(SRC_LANG, SRC_LANG)
+    TGT_LANG = GOOGLE_LANG_MAP.get(TGT_LANG, TGT_LANG)
+
 with open(SRC_SRT, encoding="utf-8") as f:
     raw = f.read().strip()
 
