@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-echo "=== setup.sh: התקנת whisper.cpp ==="
+MODEL="${1:-tiny}"
+MODEL_FILE="ggml-${MODEL}.bin"
+
+echo "=== setup.sh: התקנת whisper.cpp (דגם: $MODEL) ==="
 
 WHISPER_DIR="whisper.cpp"
 WHISPER_BIN="$WHISPER_DIR/build/bin/whisper-cli"
@@ -32,15 +35,15 @@ if [ ! -f "build/bin/whisper-cli" ]; then
     exit 1
 fi
 
-MODEL="ggml-tiny.bin"
-if [ ! -f "models/$MODEL" ]; then
-    echo "מוריד את מודל $MODEL..."
+if [ ! -f "models/$MODEL_FILE" ]; then
+    echo "מוריד את מודל $MODEL_FILE..."
     mkdir -p models
-    wget -q -O "models/$MODEL" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$MODEL"
+    wget -q -O "models/$MODEL_FILE" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$MODEL_FILE"
 fi
 
 echo "תוכן build/bin/:"
 ls -la build/bin/
+echo "מודל: $(ls -lh models/$MODEL_FILE | awk '{print $5}')"
 
 cd ..
 echo "=== setup.sh: הושלם ==="

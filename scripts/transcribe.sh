@@ -4,6 +4,8 @@ set -e
 INPUT_FILE="$1"
 OUTPUT_DIR="$2"
 LANG="${3:-auto}"
+MODEL="${4:-tiny}"
+MODEL_FILE="ggml-${MODEL}.bin"
 
 WHISPER_BIN=""
 for candidate in \
@@ -24,27 +26,27 @@ if [ -z "$WHISPER_BIN" ]; then
 fi
 
 WHISPER_DIR=$(dirname "$(dirname "$WHISPER_BIN")")
-MODEL_FILE="$WHISPER_DIR/models/ggml-tiny.bin"
+MODEL_PATH="$WHISPER_DIR/models/$MODEL_FILE"
 
-if [ ! -f "$MODEL_FILE" ]; then
-    MODEL_FILE="./whisper.cpp/models/ggml-tiny.bin"
+if [ ! -f "$MODEL_PATH" ]; then
+    MODEL_PATH="./whisper.cpp/models/$MODEL_FILE"
 fi
 
-if [ ! -f "$MODEL_FILE" ]; then
-    echo "שגיאה: מודל לא נמצא ב-$MODEL_FILE"
+if [ ! -f "$MODEL_PATH" ]; then
+    echo "שגיאה: מודל לא נמצא ב-$MODEL_PATH"
     exit 1
 fi
 
-echo "=== transcribe.sh: מתמלל עם whisper.cpp (דגם tiny) ==="
+echo "=== transcribe.sh: מתמלל עם whisper.cpp (דגם $MODEL) ==="
 echo "בינארי: $WHISPER_BIN"
-echo "מודל: $MODEL_FILE"
+echo "מודל: $MODEL_PATH"
 echo "קובץ: $INPUT_FILE"
 echo "שפה: $LANG"
 
 cp "$INPUT_FILE" "./audio_tmp.wav"
 
 "$WHISPER_BIN" -f "./audio_tmp.wav" \
-    -m "$MODEL_FILE" \
+    -m "$MODEL_PATH" \
     -osrt -oj \
     -l "$LANG" \
     -t "$(nproc)" 2>&1
