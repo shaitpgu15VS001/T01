@@ -35,7 +35,7 @@ jobs:
   process-video:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: התקנת תלויות מערכת
         run: |
@@ -45,7 +45,7 @@ jobs:
 
       - name: מטמון whisper.cpp
         id: whisper-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: whisper.cpp/
           key: whisper-cpp-${{ runner.os }}-${{ hashFiles('scripts/setup.sh') }}
@@ -86,7 +86,7 @@ jobs:
             "${{ inputs.position }}"
 
       - name: העלאת כתוביות ל-Artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: כתוביות
           path: output/
@@ -98,7 +98,7 @@ jobs:
 
       - name: העלאת סרטון ממוסג ל-Artefacts
         if: inputs.action == 'burn'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: סרטון-מסומן
           path: output/סרטון-מסומן.mp4
