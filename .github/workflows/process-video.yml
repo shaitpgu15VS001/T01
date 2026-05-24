@@ -40,7 +40,7 @@ jobs:
       - name: התקנת תלויות מערכת
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg wget
+          sudo apt-get install -y -qq build-essential g++ ffmpeg wget
           pip3 install requests
 
       - name: מטמון whisper.cpp
@@ -50,8 +50,17 @@ jobs:
           path: whisper.cpp/
           key: whisper-cpp-${{ runner.os }}-${{ hashFiles('scripts/setup.sh') }}
 
+      - name: בדיקת תוכן הקאש
+        run: |
+          if [ -d "whisper.cpp" ]; then
+            echo "whisper.cpp קיים:"
+            ls -la whisper.cpp/ | head -20
+            [ -f "whisper.cpp/main" ] && echo "✅ main קיים" || echo "❌ main חסר"
+          else
+            echo "whisper.cpp לא קיים (cache miss)"
+          fi
+
       - name: התקנת whisper.cpp
-        if: steps.whisper-cache.outputs.cache-hit != 'true'
         run: bash scripts/setup.sh
 
       - name: הורדת הסרטון
