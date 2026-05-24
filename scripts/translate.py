@@ -13,8 +13,18 @@ SRC_JSON = sys.argv[5] if len(sys.argv) > 5 else ""
 if SRC_LANG == "auto" and SRC_JSON and os.path.exists(SRC_JSON):
     with open(SRC_JSON) as f:
         data = json.load(f)
-    if isinstance(data, dict) and "language" in data:
-        SRC_LANG = data["language"]
+    if isinstance(data, dict):
+        for key in ("language",):
+            if key in data:
+                SRC_LANG = data[key]
+                break
+        if SRC_LANG == "auto" and "transcription" in data:
+            if isinstance(data["transcription"], dict):
+                SRC_LANG = data["transcription"].get("language", "auto")
+
+if SRC_LANG == "auto":
+    SRC_LANG = "en"
+    print("לא זוהתה שפה, ברירת מחדל: en")
 
 print(f"שפת מקור: {SRC_LANG} → שפת יעד: {TGT_LANG}")
 
