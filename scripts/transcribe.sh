@@ -5,8 +5,6 @@ INPUT_FILE="$1"
 OUTPUT_DIR="$2"
 LANG="${3:-auto}"
 
-BASENAME=$(basename "$INPUT_FILE")
-
 WHISPER_BIN=""
 for candidate in \
     "./whisper.cpp/build/bin/whisper-cli" \
@@ -43,20 +41,32 @@ echo "מודל: $MODEL_FILE"
 echo "קובץ: $INPUT_FILE"
 echo "שפה: $LANG"
 
-"$WHISPER_BIN" -f "$INPUT_FILE" \
+cp "$INPUT_FILE" "./audio_tmp.wav"
+
+"$WHISPER_BIN" -f "./audio_tmp.wav" \
     -m "$MODEL_FILE" \
     -osrt -oj \
     -l "$LANG" \
     -t "$(nproc)" 2>&1
 
-if [ -f "$BASENAME.srt" ]; then
-    mv "$BASENAME.srt" "$OUTPUT_DIR/source.srt"
+echo "קבצים שנוצרו:"
+ls -la ./audio_tmp.wav.* 2>/dev/null || echo "לא נמצאו קבצי פלט"
+
+if [ -f "./audio_tmp.wav.srt" ]; then
+    mv "./audio_tmp.wav.srt" "$OUTPUT_DIR/source.srt"
     echo "נוצר: $OUTPUT_DIR/source.srt"
 fi
 
-if [ -f "$BASENAME.json" ]; then
-    mv "$BASENAME.json" "$OUTPUT_DIR/source.json"
+if [ -f "./audio_tmp.wav.json" ]; then
+    mv "./audio_tmp.wav.json" "$OUTPUT_DIR/source.json"
     echo "נוצר: $OUTPUT_DIR/source.json"
+fi
+
+rm -f "./audio_tmp.wav"
+
+if [ ! -f "$OUTPUT_DIR/source.srt" ]; then
+    echo "שגיאה: קובץ SRT לא נוצר"
+    exit 1
 fi
 
 echo "=== transcribe.sh: הושלם ==="
